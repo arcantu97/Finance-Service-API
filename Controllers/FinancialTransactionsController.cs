@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 namespace FinanceService.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/transactions")]
     public class FinancialTransactionsController : ControllerBase
     {
         private readonly FinanceContext _context;
@@ -117,7 +117,7 @@ namespace FinanceService.Controllers
         /// <returns>NoContent si se eliminaron todas las transacciones.</returns>
         // DELETE: api/transactions
         [HttpDelete()]
-        public async Task<IActionResult> DeleteTransactios()
+        public async Task<IActionResult> DeleteTransactions()
         {
 
             var transactions = await _context.Transactions.ToListAsync();
