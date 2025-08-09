@@ -11,14 +11,14 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FinanceService.Migrations
 {
     [DbContext(typeof(FinanceContext))]
-    [Migration("20250804004148_AddFinancialEntities")]
-    partial class AddFinancialEntities
+    [Migration("20250807041855_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
-            modelBuilder.HasAnnotation("ProductVersion", "9.0.7");
+            modelBuilder.HasAnnotation("ProductVersion", "8.0.4");
 
             modelBuilder.Entity("FinanceService.Models.FinancialTransaction", b =>
                 {

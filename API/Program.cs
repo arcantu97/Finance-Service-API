@@ -3,6 +3,9 @@ using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.WebHost.UseUrls("http://0.0.0.0:80");
+
+
 builder.Services.AddDbContext<FinanceContext>(options => options.UseSqlite("Data Source=finance.db"));
 
 builder.Services.AddControllers();
@@ -29,15 +32,17 @@ builder.Services.AddSwaggerGen(c =>
     c.IncludeXmlComments(xmlPath);
 });
 
-
-
 var app = builder.Build();
 
-if (app.Environment.IsDevelopment())
+using (var scope = app.Services.CreateScope())
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
+    var db = scope.ServiceProvider.GetRequiredService<FinanceContext>();
+    db.Database.Migrate();
 }
+
+
+app.UseSwagger();
+app.UseSwaggerUI();
 
 app.MapControllers();
 
