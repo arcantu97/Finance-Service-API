@@ -10,127 +10,151 @@ namespace FinanceService.Controllers
     public class FinancialTransactionsController : ControllerBase
     {
         private readonly FinanceContext _context;
-        public FinancialTransactionsController(FinanceContext context)
+        private readonly ILogger<FinancialTransactionsController> _logger;
+
+        public FinancialTransactionsController(FinanceContext context, ILogger<FinancialTransactionsController> logger)
         {
             _context = context;
+            _logger = logger;
         }
 
         /// <summary>
         /// Obtiene todos los movimientos financieros.
         /// </summary>
-        /// <returns>Lista de transacciones financieras.</returns>
-        // GET: api/transactions
         [HttpGet]
         public async Task<ActionResult<IEnumerable<FinancialTransaction>>> GetTransactions()
         {
-            return await _context.Transactions.ToListAsync();
+            try
+            {
+                var transactions = await _context.Transactions.ToListAsync();
+                return Ok(transactions);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al obtener las transacciones.");
+                return StatusCode(500, "Error interno del servidor.");
+            }
         }
 
         /// <summary>
         /// Obtiene una transacción financiera por su ID.
         /// </summary>
-        /// <param name="id">ID de la transacción.</param>
-        /// <returns>La transacción financiera si se encuentra; otherwise NotFound.</returns>
-        // GET: api/transactions/{id}
         [HttpGet("{id}")]
         public async Task<ActionResult<FinancialTransaction>> GetTransaction(int id)
         {
-            var transaction = await _context.Transactions.FindAsync(id);
-            if (transaction == null)
+            try
             {
-                return NotFound();
+                var transaction = await _context.Transactions.FindAsync(id);
+                if (transaction == null)
+                    return NotFound();
+
+                return Ok(transaction);
             }
-            return transaction;
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error al obtener la transacción con ID {id}.");
+                return StatusCode(500, "Error interno del servidor.");
+            }
         }
 
         /// <summary>
         /// Crea una nueva transacción financiera.
         /// </summary>
-        /// <param name="transaction">Objeto FinancialTransaction a crear.</param>
-        /// <returns>La transacción creada con su URI.</returns>
-        // POST: api/transactions
         [HttpPost]
         public async Task<ActionResult<FinancialTransaction>> PostTransaction(FinancialTransaction transaction)
         {
-            _context.Transactions.Add(transaction);
-            await _context.SaveChangesAsync();
-            return CreatedAtAction(nameof(GetTransaction), new { id = transaction.Id }, transaction);
+            try
+            {
+                _context.Transactions.Add(transaction);
+                await _context.SaveChangesAsync();
+
+                return CreatedAtAction(nameof(GetTransaction), new { id = transaction.Id }, transaction);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al crear una transacción.");
+                return StatusCode(500, "Error interno del servidor.");
+            }
         }
 
         /// <summary>
         /// Actualiza una transacción financiera existente.
         /// </summary>
-        /// <param name="id">ID de la transacción a actualizar.</param>
-        /// <param name="transaction">Objeto FinancialTransaction con datos actualizados.</param>
-        /// <returns>NoContent si se actualizó, BadRequest o NotFound si hubo problemas.</returns>
-        // PUT: api/transactions/{id}
         [HttpPut("{id}")]
         public async Task<IActionResult> PutTransaction(int id, FinancialTransaction transaction)
         {
             if (id != transaction.Id)
-            {
-                return BadRequest();
-            }
+                return BadRequest("El ID en la URL no coincide con el cuerpo de la solicitud.");
+
             _context.Entry(transaction).State = EntityState.Modified;
 
             try
             {
                 await _context.SaveChangesAsync();
+                return NoContent();
             }
             catch (DbUpdateConcurrencyException)
             {
                 if (!_context.Transactions.Any(e => e.Id == id))
-                {
                     return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
+
+                throw;
             }
-            return NoContent();
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error al actualizar la transacción con ID {id}.");
+                return StatusCode(500, "Error interno del servidor.");
+            }
         }
 
         /// <summary>
         /// Elimina una transacción financiera por ID.
         /// </summary>
-        /// <param name="id">ID de la transacción a eliminar.</param>
-        /// <returns>NoContent si se eliminó, NotFound si no existe.</returns>
-        // DELETE: api/transactions/{id}
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteTransaction(int id)
         {
-            var transaction = await _context.Transactions.FindAsync(id);
-            if (transaction == null)
+            try
             {
-                return NotFound();
-            }
-            _context.Transactions.Remove(transaction);
-            await _context.SaveChangesAsync();
-            return NoContent();
-        }
+                var transaction = await _context.Transactions.FindAsync(id);
+                if (transaction == null)
+                    return NotFound();
 
+                _context.Transactions.Remove(transaction);
+                await _context.SaveChangesAsync();
+
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error al eliminar la transacción con ID {id}.");
+                return StatusCode(500, "Error interno del servidor.");
+            }
+        }
 
         /// <summary>
         /// Elimina todas las transacciones financieras.
         /// </summary>
-        /// <returns>NoContent si se eliminaron todas las transacciones.</returns>
-        // DELETE: api/transactions
-        [HttpDelete()]
-        public async Task<IActionResult> DeleteTransactios()
+        [HttpDelete]
+        public async Task<IActionResult> DeleteAllTransactions()
         {
-
-            var transactions = await _context.Transactions.ToListAsync();
-            if (transactions.Count == 0)
+            try
             {
-                return NotFound();
-            }
-            _context.Transactions.RemoveRange(transactions);
-            await _context.SaveChangesAsync();
+                var transactions = await _context.Transactions.ToListAsync();
+                if (!transactions.Any())
+                    return NotFound("No hay transacciones para eliminar.");
 
-            // Reinicia el ID de la tabla
-            await _context.Database.ExecuteSqlRawAsync("DELETE FROM sqlite_sequence WHERE name='Transactions'");
-            return NoContent();
+                _context.Transactions.RemoveRange(transactions);
+                await _context.SaveChangesAsync();
+
+                await _context.Database.ExecuteSqlRawAsync("DELETE FROM sqlite_sequence WHERE name='Transactions'");
+
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al eliminar todas las transacciones.");
+                return StatusCode(500, "Error interno del servidor.");
+            }
         }
     }
 }
