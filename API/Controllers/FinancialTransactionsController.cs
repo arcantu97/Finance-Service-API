@@ -1,7 +1,6 @@
-using FinanceService.Data;
+using FinanceService.Application.Transactions;
 using FinanceService.Models;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace FinanceService.Controllers
 {
@@ -9,12 +8,12 @@ namespace FinanceService.Controllers
     [Route("api/[controller]")]
     public class FinancialTransactionsController : ControllerBase
     {
-        private readonly FinanceContext _context;
+        private readonly ITransactionsService _transactionsService;
         private readonly ILogger<FinancialTransactionsController> _logger;
 
-        public FinancialTransactionsController(FinanceContext context, ILogger<FinancialTransactionsController> logger)
+        public FinancialTransactionsController(ITransactionsService transactionsService, ILogger<FinancialTransactionsController> logger)
         {
-            _context = context;
+            _transactionsService = transactionsService;
             _logger = logger;
         }
 
@@ -26,7 +25,7 @@ namespace FinanceService.Controllers
         {
             try
             {
-                var transactions = await _context.Transactions.ToListAsync();
+                var transactions = await _transactionsService.GetAllAsync();
                 return Ok(transactions);
             }
             catch (Exception ex)
@@ -44,7 +43,7 @@ namespace FinanceService.Controllers
         {
             try
             {
-                var transaction = await _context.Transactions.FindAsync(id);
+                var transaction = await _transactionsService.GetByIdAsync(id);
                 if (transaction == null)
                     return NotFound();
 
@@ -63,12 +62,23 @@ namespace FinanceService.Controllers
         [HttpPost]
         public async Task<ActionResult<FinancialTransaction>> PostTransaction(FinancialTransaction transaction)
         {
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+
             try
             {
-                _context.Transactions.Add(transaction);
-                await _context.SaveChangesAsync();
-
+                await _transactionsService.CreateAsync(transaction);
+                _logger.LogInformation($"Transacción creada correctamente");
                 return CreatedAtAction(nameof(GetTransaction), new { id = transaction.Id }, transaction);
+            }
+            catch (ArgumentException ex)
+            {
+                _logger.LogWarning(ex, "Validación fallida al crear transacción.");
+                return BadRequest(ex.Message);
+            }
+            catch (InvalidOperationException ex)
+            {
+                _logger.LogWarning(ex, "Regla de negocio al crear transacción.");
+                return UnprocessableEntity(ex.Message);
             }
             catch (Exception ex)
             {
@@ -83,22 +93,12 @@ namespace FinanceService.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> PutTransaction(int id, FinancialTransaction transaction)
         {
-            if (id != transaction.Id)
-                return BadRequest("El ID en la URL no coincide con el cuerpo de la solicitud.");
-
-            _context.Entry(transaction).State = EntityState.Modified;
 
             try
             {
-                await _context.SaveChangesAsync();
+                await _transactionsService.UpdateAsync(id, transaction);
+                _logger.LogInformation($"Transacción actualizada correctamente.");
                 return NoContent();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!_context.Transactions.Any(e => e.Id == id))
-                    return NotFound();
-
-                throw;
             }
             catch (Exception ex)
             {
@@ -115,12 +115,8 @@ namespace FinanceService.Controllers
         {
             try
             {
-                var transaction = await _context.Transactions.FindAsync(id);
-                if (transaction == null)
-                    return NotFound();
-
-                _context.Transactions.Remove(transaction);
-                await _context.SaveChangesAsync();
+                await _transactionsService.DeleteAsync(id);
+                _logger.LogInformation($"Transacción eliminada correctamente.");
 
                 return NoContent();
             }
@@ -139,15 +135,7 @@ namespace FinanceService.Controllers
         {
             try
             {
-                var transactions = await _context.Transactions.ToListAsync();
-                if (!transactions.Any())
-                    return NotFound("No hay transacciones para eliminar.");
-
-                _context.Transactions.RemoveRange(transactions);
-                await _context.SaveChangesAsync();
-
-                await _context.Database.ExecuteSqlRawAsync("DELETE FROM sqlite_sequence WHERE name='Transactions'");
-
+                await _transactionsService.DeleteAllAsync();
                 return NoContent();
             }
             catch (Exception ex)

@@ -1,10 +1,10 @@
-namespace FinanceService.Models.Enums
+namespace FinanceService.Enums
 { 
-public enum SavingType
-{
-    Manual,
-    Automatic
-}
-    
+    public enum SavingType
+    {
+        Unknown = 0,
+        Manual = 1,
+        Automatic = 2
+    } 
 }
 
