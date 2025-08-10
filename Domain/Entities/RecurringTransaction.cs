@@ -1,4 +1,4 @@
-using FinanceService.Models.Enums;
+using FinanceService.Enums;
 
 namespace FinanceService.Models
 {

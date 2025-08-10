@@ -1,13 +1,14 @@
-namespace FinanceService.Models.Enums
+namespace FinanceService.Enums
 {
 public enum RecurringTransactionType
     {
-        None,
-        OneTime,
-        Weekly,
-        Biweekly, // quincenal
-        Monthly,
-        Annually
+        Unknown = 0,
+        None = 1,
+        OneTime = 2,
+        Weekly = 3,
+        Biweekly = 4,
+        Monthly = 5,
+        Annually = 6
     }
 }
 
